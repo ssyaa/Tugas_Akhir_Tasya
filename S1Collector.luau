@@ -1,10 +1,3 @@
--- ============================================================
--- S1Collector.lua  (Script — ServerScriptService)
--- 1 pohon = 4 log = 1 HTTP request batch ke GAS
--- Pakai attribute S1EventId di tiap log agar client bisa temukan
--- tanpa mengganggu nama/gameplay log
--- ============================================================
-
 local HttpService       = game:GetService("HttpService")
 local Players           = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -78,24 +71,6 @@ end
 local pendingBatches = {}
 local eventIdToBatch = {}
 
---[[local function finalizeBatch(batchId, batch)
-	for i, row in ipairs(batch.rows) do
-		local data = batch.clientData[i]
-		if data then
-			row.client_object_status        = data.status
-			row.client_spawn_receive_time   = data.receiveTime
-			row.client_receive_time         = data.receiveTime
-		end
-	end
-
-	for eventId in pairs(batch.eventIdToIndex) do
-		eventIdToBatch[eventId] = nil
-	end
-
-	pendingBatches[batchId] = nil
-	sendPayload(batch.rows)
-end]]
-
 local function finalizeBatch(batchId, batch)
 	for eventId in pairs(batch.eventIdToIndex) do
 		eventIdToBatch[eventId] = nil
@@ -115,10 +90,7 @@ local function checkBatchComplete(batchId)
 	finalizeBatch(batchId, batch)
 end
 
--- ============================================================
 -- LISTENER: pohon hancur dari tree_handler
--- ============================================================
-
 S1TreeBroke.Event:Connect(function(player, tree, logs)
 	if not player or not tree or not logs then return end
 
@@ -166,15 +138,6 @@ S1TreeBroke.Event:Connect(function(player, tree, logs)
 		sendPayload(rows)
 		return
 	end
-
-	--[[pendingBatches[batchId] = {
-		rows             = rows,
-		eventIdToIndex   = eventIdToIndex,
-		totalLogs        = #logs,
-		playerCount      = playerCount,
-		reportsReceived  = {},
-		clientData       = {},
-	}]]
 	
 	pendingBatches[batchId] = {
 		rowTemplates     = rows,  -- ganti dari rows
@@ -196,10 +159,7 @@ S1TreeBroke.Event:Connect(function(player, tree, logs)
 	end)
 end)
 
--- ============================================================
 -- LISTENER: laporan dari client
--- ============================================================
-
 S1ClientReport.OnServerEvent:Connect(function(sender, eventId, clientReceiveTime, clientStatus)
 	local batchId = eventIdToBatch[eventId]
 	if not batchId then return end
@@ -222,27 +182,6 @@ S1ClientReport.OnServerEvent:Connect(function(sender, eventId, clientReceiveTime
 	batch.reportsReceived[rowIndex] = (batch.reportsReceived[rowIndex] or 0) + 1
 	checkBatchComplete(batchId)
 end)
-
---[[S1ClientReport.OnServerEvent:Connect(function(_, eventId, clientReceiveTime, clientStatus)
-	local batchId = eventIdToBatch[eventId]
-	if not batchId then return end
-
-	local batch = pendingBatches[batchId]
-	if not batch then return end
-
-	local rowIndex = batch.eventIdToIndex[eventId]
-	if not rowIndex then return end
-
-	if not batch.clientData[rowIndex] then
-		batch.clientData[rowIndex] = {
-			status      = clientStatus,
-			receiveTime = clientReceiveTime,
-		}
-	end
-
-	batch.reportsReceived[rowIndex] = (batch.reportsReceived[rowIndex] or 0) + 1
-	checkBatchComplete(batchId)
-end)]]
 
 print("[S1Collector] Siap. Session ID: " .. CONFIG.SESSION_ID)
 print("[S1Collector] Batch mode: 4 log = 1 HTTP request")
