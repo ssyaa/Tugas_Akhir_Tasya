@@ -1,9 +1,3 @@
--- ============================================================
--- S1CollectorClient.lua  (LocalScript — StarterPlayerScripts)
--- Client scan workspace.Items berdasarkan attribute S1EventId
--- Tidak bergantung pada referensi Instance dari server
--- ============================================================
-
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local eventsFolder      = ReplicatedStorage:WaitForChild("Events")
@@ -11,11 +5,6 @@ local S1ServerBroadcast = eventsFolder:WaitForChild("S1ServerBroadcast")
 local S1ClientReport    = eventsFolder:WaitForChild("S1ClientReport")
 
 local REPLICATION_WAIT  = 0.5  -- detik tunggu replikasi
-
--- ============================================================
--- LISTENER: server broadcast ada batch log baru
--- Server kirim: batchId, eventIdToIndex (dict eventId ? rowIndex)
--- ============================================================
 
 S1ServerBroadcast.OnClientEvent:Connect(function(batchId, eventIdToIndex)
 	local clientReceiveTime = tick()
