@@ -1,20 +1,8 @@
--- ============================================================
--- S2CollectorClient.lua  (LocalScript — StarterPlayerScripts)
--- Mendengar broadcast dari S2Collector server,
--- lalu melaporkan posisi item yang client lihat
--- ============================================================
-
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local eventsFolder      = ReplicatedStorage:WaitForChild("Events")
 local S2ServerBroadcast = eventsFolder:WaitForChild("S2ServerBroadcast")
 local S2ClientReport    = eventsFolder:WaitForChild("S2ClientReport")
-
--- ============================================================
--- LISTENER: server bilang ada drag event baru
--- Server kirim: eventId, item (BasePart)
--- Client baca posisi item dari sisinya sendiri, lalu lapor
--- ============================================================
 
 S2ServerBroadcast.OnClientEvent:Connect(function(eventId, item)
 	local clientReceiveTime = tick()
