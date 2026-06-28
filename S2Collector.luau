@@ -1,18 +1,8 @@
--- ============================================================
--- S2Collector.lua  (Script — ServerScriptService)
--- Kirim data posisi drag item (scenario_id = 2) ke GAS
--- Dicatat saat: StartDrag/MobileStart dan StopDrag/MobileStop
--- ============================================================
-
 local HttpService       = game:GetService("HttpService")
 local Players           = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local CollectionService = game:GetService("CollectionService")
 local PingService = require(ReplicatedStorage:WaitForChild("Modules"):WaitForChild("PingService"))
-
--- ============================================================
--- KONFIGURASI
--- ============================================================
 
 local CONFIG = {
 	ENDPOINT       = "https://script.google.com/macros/s/AKfycbxe5GqxoYDLbSw4kqNKzIxYajpk0hoAstRKTe9Cq7-zjGzXOUarcnqlRiTfbUYn7zdL/exec",
@@ -32,10 +22,6 @@ if not (ok and SharedConfig) then
 	warn("[S2Collector] SharedConfig tidak ditemukan, pakai session ID sendiri.")
 end
 
--- ============================================================
--- REMOTE EVENTS — buat otomatis jika belum ada
--- ============================================================
-
 local eventsFolder = ReplicatedStorage:WaitForChild("Events")
 
 local function getOrCreate(name)
@@ -49,14 +35,8 @@ local function getOrCreate(name)
 	return re
 end
 
--- Server broadcast ke client saat ada event drag
 local S2ServerBroadcast = getOrCreate("S2ServerBroadcast")
--- Client lapor posisi mereka ke server
 local S2ClientReport    = getOrCreate("S2ClientReport")
-
--- ============================================================
--- FUNGSI BANTU
--- ============================================================
 
 local function getTimestamp()
 	return os.date("!%Y-%m-%dT%H:%M:%SZ")
@@ -80,30 +60,7 @@ local function buildEventId()
 	return tostring(tick()):gsub("%.", "_")
 end
 
--- ============================================================
--- PENDING EVENTS
--- ============================================================
-
 local pendingEvents = {}
-
---[[local function finalize(eventId, pending)
-	local r = pending.row
-	if #pending.clientPosData > 0 then
-		local sx, sy, sz = 0, 0, 0
-		for _, p in ipairs(pending.clientPosData) do
-			sx = sx + p.x
-			sy = sy + p.y
-			sz = sz + p.z
-		end
-		local n = #pending.clientPosData
-		r.client_pos_x = sx / n
-		r.client_pos_y = sy / n
-		r.client_pos_z = sz / n
-		r.client_receive_time = pending.clientReceiveTimes[1] or ""
-	end
-	pendingEvents[eventId] = nil
-	sendPayload({ r })
-end]]
 
 local function finalize(eventId, pending)
 	if #pending.clientRows > 0 then
@@ -111,13 +68,6 @@ local function finalize(eventId, pending)
 	end
 	pendingEvents[eventId] = nil
 end
-
--- ============================================================
--- FUNGSI CATAT EVENT DRAG
--- eventType = "DragStart" | "DragStop"
--- item      = BasePart yang di-drag
--- player    = pemain yang melakukan drag
--- ============================================================
 
 local function isItemInWorld(item)
 	if not item then return false end
@@ -173,14 +123,6 @@ local function recordDragEvent(eventType, item, player)
 		sendPayload({ row })
 		return
 	end
-
-	--[[pendingEvents[eventId] = {
-		row                = row,
-		clientCount        = playerCount,
-		clientsReported    = 0,
-		clientPosData      = {},
-		clientReceiveTimes = {},
-	}]]
 	
 	pendingEvents[eventId] = {
 		rowTemplate        = row,
@@ -201,12 +143,6 @@ local function recordDragEvent(eventType, item, player)
 	end)
 end
 
--- ============================================================
--- HOOK KE DragEvent YANG SUDAH ADA
--- Dengarkan DragEvent yang sama, filter hanya Start & Stop
--- Tidak mengganggu handler drag yang sudah ada di script lain
--- ============================================================
-
 local DragEvent = eventsFolder:WaitForChild("drag_event")
 
 DragEvent.OnServerEvent:Connect(function(player, action, item)
@@ -218,22 +154,7 @@ DragEvent.OnServerEvent:Connect(function(player, action, item)
 	-- UpdateDrag diabaikan (tidak dicatat)
 end)
 
--- ============================================================
 -- LISTENER: laporan posisi dari client
--- ============================================================
-
---[[S2ClientReport.OnServerEvent:Connect(function(_, eventId, clientReceiveTime, cx, cy, cz)
-	local pending = pendingEvents[eventId]
-	if not pending then return end
-
-	table.insert(pending.clientPosData, { x = cx, y = cy, z = cz })
-	table.insert(pending.clientReceiveTimes, clientReceiveTime)
-	pending.clientsReported = pending.clientsReported + 1
-
-	if pending.clientsReported >= pending.clientCount then
-		finalize(eventId, pending)
-	end
-end)]]
 
 S2ClientReport.OnServerEvent:Connect(function(sender, eventId, clientReceiveTime, cx, cy, cz)
 	local pending = pendingEvents[eventId]
@@ -256,10 +177,7 @@ S2ClientReport.OnServerEvent:Connect(function(sender, eventId, clientReceiveTime
 	end
 end)
 
--- ============================================================
 -- INISIALISASI
--- ============================================================
-
 print("[S2Collector] Siap. Scenario ID: " .. CONFIG.SCENARIO_ID)
 print("[S2Collector] Session ID: "         .. CONFIG.SESSION_ID)
 print("[S2Collector] Mencatat DragStart dan DragStop saja.")
